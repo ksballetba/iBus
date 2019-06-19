@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/material_component_bottom_sheet_list_item_height">
+
+    <ImageView
+            android:id="@+id/ivPoiType"
+            android:layout_width="@dimen/material_layout_icon"
+            android:layout_height="@dimen/material_layout_icon"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginStart="16dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <TextView
+            android:id="@+id/tvPoiName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/material_typography_body1"
+            android:textColor="@color/primary_text"
+            android:layout_marginTop="@dimen/material_component_bottom_sheet_edge_top_bottom_margins"
+            android:layout_marginStart="@dimen/material_component_bottom_sheet_edge_left_right_margins"
+            app:layout_constraintStart_toEndOf="@+id/ivPoiType"
+            app:layout_constraintTop_toTopOf="parent"
+            />
+
+    <TextView
+            android:id="@+id/tvPoiAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/secondary_text"
+            app:layout_constraintStart_toEndOf="@+id/ivPoiType"
+            android:layout_marginBottom="@dimen/material_component_bottom_sheet_edge_top_bottom_margins"
+            android:layout_marginStart="@dimen/material_component_bottom_sheet_edge_left_right_margins"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:maxLines="1"
+            android:maxEms="18"
+            android:ellipsize="end"/>
+
+    <ImageView
+            android:layout_width="@dimen/material_layout_icon"
+            android:layout_height="@dimen/material_layout_icon"
+            android:src="@drawable/ic_directions_grey_800_24dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginEnd="16dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+</android.support.constraint.ConstraintLayout>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+            android:id="@+id/nav_collection"
+            android:icon="@drawable/ic_star_black_24dp"
+            android:title="@string/nav_menu_collection"/>
+
+    <item
+            android:id="@+id/nav_setting"
+            android:icon="@drawable/ic_settings_black_24dp"
+            android:title="@string/nav_menu_setting"/>
+</menu>
