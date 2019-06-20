@@ -37,5 +37,6 @@ class SuggestPoisAdapter(layoutResId:Int,data:List<PoiInfo>):BaseQuickAdapter<Po
                 helper?.setImageResource(R.id.ivPoiType,R.drawable.ic_place_grey_800_24dp)
             }
         }
+        helper?.addOnClickListener(R.id.ivPoiNavigation)
     }
 }

@@ -10,6 +10,8 @@
     <string name="search_hint">查找地点、公交、地铁</string>
     <string name="search_nearby">搜附近</string>
     <string name="err_no_poi_result">未找到结果，换个关键词试试吧</string>
+    <string name="err_no_routeline_result">暂无合适方案，建议采用其他出行方式</string>
+    <string name="err_no_endnode_result">请先选择目标导航点</string>
     <string name="err_no_loc_service">定位失败，请开启定位服务后重试</string>
     <string name="err_no_network_service">加载失败，请连接网络后重试</string>
 

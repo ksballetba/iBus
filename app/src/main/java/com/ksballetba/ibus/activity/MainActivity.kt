@@ -19,6 +19,7 @@ import com.baidu.mapapi.map.*
 import com.baidu.mapapi.model.LatLng
 import com.baidu.mapapi.search.busline.BusLineResult
 import com.baidu.mapapi.search.busline.OnGetBusLineSearchResultListener
+import com.baidu.mapapi.search.core.PoiDetailInfo
 import com.baidu.mapapi.search.core.PoiInfo
 import com.baidu.mapapi.search.core.SearchResult
 import com.baidu.mapapi.search.poi.*
@@ -50,6 +51,7 @@ class MainActivity : AppCompatActivity() {
         val QUERY = "QUERY"
         val MARKED_PLACE_ID = "MARK_PLACE_ID"
         val IS_SEARCH_NEARBY = "IS_SEARCH_NEARBY"
+        val COOR_TYPE = "bd09ll"
     }
 
     private lateinit var rxPermissions: RxPermissions
@@ -59,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private var isFirstLocated = true
     private lateinit var mOnGetPoiSearchResultListener:OnGetPoiSearchResultListener
     private lateinit var mOnGetBusLineSearchResultListener: OnGetBusLineSearchResultListener
+    private lateinit var mOnMapClickListener:BaiduMap.OnMapClickListener
     private val mPoiDataRepository:PoiDataRepository by lazy {
         PoiDataRepository(mOnGetPoiSearchResultListener)
     }
@@ -84,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         initToolbar()
         initFAB()
         initPoiSearchListener()
+        initOnMapClickListener()
         initBottomSheet()
         initSuggestPoisRec()
     }
@@ -98,6 +102,7 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         if (intent?.getStringExtra(QUERY) != null) {
             mBottomBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            mBottomBehavior.peekHeight = dip(220)
             mQuery = intent.getStringExtra(QUERY)
             if(intent.getBooleanExtra(IS_SEARCH_NEARBY,false)){
                 mPoiDataRepository.startNearbyPoiSearch(currentLatLng,mQuery)
@@ -163,6 +168,7 @@ class MainActivity : AppCompatActivity() {
         option.openGps = true
         option.scanSpan = 1000
         option.isNeedPoiRegion = true
+        option.coorType = COOR_TYPE
         option.locationMode = LocationClientOption.LocationMode.Hight_Accuracy
         option.setIsNeedAddress(true)
         mLocationClient.locOption = option
@@ -197,7 +203,6 @@ class MainActivity : AppCompatActivity() {
         }
         fabDirection.setOnClickListener {
             val intent = Intent(this,RouteActivity::class.java)
-
             startActivity(intent)
         }
         fabCollect.setOnClickListener {
@@ -227,13 +232,13 @@ class MainActivity : AppCompatActivity() {
             override fun onStateChanged(bottomSheet: View, newState: Int) {
                 when (newState) {
                     BottomSheetBehavior.STATE_COLLAPSED -> {
-                        fabMyLocation.visibility = View.GONE
-                        fabDirection.visibility = View.GONE
+                        fabMyLocation.hide()
+                        fabDirection.hide()
                         fabCollect.visibility = View.VISIBLE
                     }
                     BottomSheetBehavior.STATE_HIDDEN -> {
-                        fabMyLocation.visibility = View.VISIBLE
-                        fabDirection.visibility = View.VISIBLE
+                        fabMyLocation.show()
+                        fabDirection.show()
                         fabCollect.visibility = View.GONE
                         mQuery = null
                         mSelectedPoi = null
@@ -285,6 +290,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun initOnMapClickListener(){
+        mOnMapClickListener = object : BaiduMap.OnMapClickListener{
+            override fun onMapClick(point: LatLng?) {
+                mBottomBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            }
+
+            override fun onMapPoiClick(mapPoi: MapPoi?): Boolean {
+                mBaiduMap.clear()
+                val poiInfo = PoiInfo()
+                poiInfo.uid = mapPoi?.uid
+                poiInfo.name = mapPoi?.name
+                poiInfo.city = currentCity
+                poiInfo.location = mapPoi?.position
+                poiInfo.address = ""
+                poiInfo.area = ""
+                val poiDetailInfo = PoiDetailInfo()
+                poiDetailInfo.tag = "地点"
+                poiInfo.setPoiDetailInfo(poiDetailInfo)
+                mBottomBehavior.peekHeight = dip(56)
+                mBottomBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                mSuggestPoisList.clear()
+                mSuggestPoisList.add(poiInfo)
+                mSuggestPoisAdapter.setNewData(mSuggestPoisList)
+                mSelectedPoi = poiInfo
+                markPlace(mapPoi!!.position)
+                navigateTo(mapPoi.position)
+                return true
+            }
+        }
+        mBaiduMap.setOnMapClickListener(mOnMapClickListener)
+    }
+
     private fun initSuggestPoisRec() {
         val layoutManager = LinearLayoutManager(this)
         layoutManager.orientation = RecyclerView.VERTICAL
@@ -301,6 +338,9 @@ class MainActivity : AppCompatActivity() {
             }else{
                 mBusLineDataRepository.startBusLineSearch(currentCity,mSelectedPoi?.uid)
             }
+        }
+        mSuggestPoisAdapter.setOnItemChildClickListener { adapter, view, position ->
+            backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area)
         }
     }
 
@@ -361,6 +401,14 @@ class MainActivity : AppCompatActivity() {
                 mIsPoiCollected = false
             }
         })
+    }
+
+    private fun backToRouteActivity(poiName:String?,poiCity:String?,poiAera:String?){
+        val intent = Intent(this,RouteActivity::class.java)
+        intent.putExtra(RouteActivity.POI_NAME,poiName)
+        intent.putExtra(RouteActivity.POI_CITY,poiCity)
+        intent.putExtra(RouteActivity.POI_AREA,poiAera)
+        startActivity(intent)
     }
 
     inner class MyLocationListener : BDAbstractLocationListener() {

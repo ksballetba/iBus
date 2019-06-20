@@ -156,6 +156,9 @@ class SearchActivity : AppCompatActivity() {
                 backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area)
             }
         }
+        mSuggestPoisAdapter.setOnItemChildClickListener { _, _, position ->
+            backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area)
+        }
     }
 
     private fun initSurroundingRec() {

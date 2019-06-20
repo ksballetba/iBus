@@ -4,6 +4,11 @@ import com.baidu.mapapi.search.route.*
 
 class RoutePlanDataRepository(onGetRoutePlanResultListener:OnGetRoutePlanResultListener?){
 
+    companion object {
+        const val RIDE_BY_BIKE = 0
+        const val RIDE_BY_MOTORCYCLE = 1
+    }
+
     private val mRoutePlanSearch = RoutePlanSearch.newInstance()
 
     init {
@@ -20,7 +25,7 @@ class RoutePlanDataRepository(onGetRoutePlanResultListener:OnGetRoutePlanResultL
         mRoutePlanSearch.bikingSearch(BikingRoutePlanOption()
             .from(stNode)
             .to(enNode)
-            .ridingType(0))
+            .ridingType(RIDE_BY_MOTORCYCLE))
     }
 
     fun startDrivingSearch(stNode:PlanNode?,enNode: PlanNode?){
