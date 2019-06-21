@@ -69,9 +69,9 @@ class SearchActivity : AppCompatActivity() {
         val iconView = svSearch.findViewById<ImageView>(android.support.v7.appcompat.R.id.search_mag_icon)
         iconView.setOnClickListener {
             if(!mIsRouteSearch){
-                backToMainActivity("",0)
+                backToMainActivity(null,0)
             }else{
-                backToRouteActivity(null,null,null)
+                backToRouteActivity(null,null,null,null,null)
             }
 
         }
@@ -96,7 +96,8 @@ class SearchActivity : AppCompatActivity() {
                     backToMainActivity(mQuery,0)
                 }else{
                     if(mSuggestPoisList.size>0){
-                        backToRouteActivity(mSuggestPoisList[0].name,mSuggestPoisList[0].city,mSuggestPoisList[0].area)
+                        backToRouteActivity(mSuggestPoisList[0].name,mSuggestPoisList[0].city,mSuggestPoisList[0].area
+                        ,mSuggestPoisList[0].location.latitude,mSuggestPoisList[0].location.longitude)
                     }else{
                         toast(getString(R.string.err_no_poi_result))
                     }
@@ -109,7 +110,8 @@ class SearchActivity : AppCompatActivity() {
                 backToMainActivity(mQuery,0)
             }else{
                 if(mSuggestPoisList.size>0){
-                    backToRouteActivity(mSuggestPoisList[0].name,mSuggestPoisList[0].city,mSuggestPoisList[0].area)
+                    backToRouteActivity(mSuggestPoisList[0].name,mSuggestPoisList[0].city,mSuggestPoisList[0].area
+                        ,mSuggestPoisList[0].location.latitude,mSuggestPoisList[0].location.longitude)
                 }else{
                     toast(getString(R.string.err_no_poi_result))
                 }
@@ -153,11 +155,13 @@ class SearchActivity : AppCompatActivity() {
             if(!mIsRouteSearch){
                 backToMainActivity(mQuery,position)
             }else{
-                backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area)
+                backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area
+                    ,mSuggestPoisList[position].location.latitude,mSuggestPoisList[position].location.longitude)
             }
         }
         mSuggestPoisAdapter.setOnItemChildClickListener { _, _, position ->
-            backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area)
+            backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area
+                ,mSuggestPoisList[position].location.latitude,mSuggestPoisList[position].location.longitude)
         }
     }
 
@@ -193,11 +197,13 @@ class SearchActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun backToRouteActivity(poiName:String?,poiCity:String?,poiAera:String?){
+    private fun backToRouteActivity(poiName:String?,poiCity:String?,poiAera:String?,poiLantitude:Double?,poiLongitude:Double?){
         val intent = Intent(this,RouteActivity::class.java)
         intent.putExtra(RouteActivity.POI_NAME,poiName)
         intent.putExtra(RouteActivity.POI_CITY,poiCity)
         intent.putExtra(RouteActivity.POI_AREA,poiAera)
+        intent.putExtra(RouteActivity.POI_LATITUDE,poiLantitude)
+        intent.putExtra(RouteActivity.POI_LONGITUDE,poiLongitude)
         startActivity(intent)
     }
 

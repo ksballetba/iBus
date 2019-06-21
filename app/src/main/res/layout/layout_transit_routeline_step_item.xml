@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/clRouteLineStep"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/routeline_step_card_height"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <ImageView
+            android:id="@+id/ivRouteStepType"
+            android:layout_width="@dimen/material_layout_icon"
+            android:layout_height="@dimen/material_layout_icon"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginTop="50dp"
+            app:layout_constraintEnd_toStartOf="@+id/view"/>
+
+    <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="@color/divider"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginStart="100dp"
+            android:layout_marginBottom="@dimen/routeline_card_edge_top_bottom_margins"
+            android:layout_marginTop="@dimen/routeline_card_edge_top_bottom_margins"
+            android:id="@+id/view"/>
+
+    <TextView
+            android:id="@+id/tvRouteStepStartName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/primary_text"
+            android:layout_marginStart="@dimen/material_component_bottom_sheet_edge_left_right_margins"
+            android:textSize="@dimen/material_typography_subheading"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="@dimen/routeline_card_edge_top_bottom_margins"
+            app:layout_constraintStart_toEndOf="@id/view"/>
+
+    <TextView
+            android:id="@+id/tvRouteStepVehicleName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/icons"
+            android:background="@color/accent"
+            android:layout_marginTop="@dimen/material_component_bottom_sheet_edge_top_bottom_margins"
+            app:layout_constraintTop_toBottomOf="@id/ivRouteStepType"
+            app:layout_constraintStart_toStartOf="@+id/ivRouteStepType"
+            app:layout_constraintEnd_toEndOf="@id/ivRouteStepType"
+            />
+
+    <TextView
+            android:id="@+id/tvRouteStepInstruction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/secondary_text"
+            android:layout_marginStart="@dimen/material_component_bottom_sheet_edge_left_right_margins"
+            android:maxEms="20"
+            android:ellipsize="end"
+            app:layout_constraintBottom_toTopOf="@id/tvRouteStepEndName"
+            app:layout_constraintStart_toEndOf="@id/view"
+            app:layout_constraintTop_toBottomOf="@+id/tvRouteStepStartName"/>
+
+    <TextView
+            android:id="@+id/tvRouteStepEndName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/primary_text"
+            android:textSize="@dimen/material_typography_subheading"
+            android:layout_marginStart="@dimen/material_component_bottom_sheet_edge_left_right_margins"
+            android:textStyle="bold"
+            android:layout_marginBottom="@dimen/routeline_card_edge_top_bottom_margins"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/view"/>
+
+</android.support.constraint.ConstraintLayout>

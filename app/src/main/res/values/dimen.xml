@@ -42,6 +42,8 @@
     <dimen name="material_layout_location_bar_height">36dp</dimen>
     <dimen name="material_layout_route_bar_height">96dp</dimen>
     <dimen name="routeline_card_height">96dp</dimen>
+    <dimen name="routeline_step_card_height">144dp</dimen>
+    <dimen name="walking_step_card_height">72dp</dimen>
     <dimen name="material_layout_app_bar_horizontal_padding">16dp</dimen>
     <dimen name="material_layout_app_bar_icon_padding">16dp</dimen>
     <dimen name="material_layout_app_bar_title_left_padding">72dp</dimen>
@@ -54,7 +56,7 @@
     <!-- Bottom sheets -->
     <dimen name="material_component_bottom_sheet_edge_left_right_margins">16dp</dimen>
     <dimen name="routeline_card_edge_top_bottom_margins">16dp</dimen>
-    <dimen name="fab_left_right_margins">56dp</dimen>
+    <dimen name="fab_left_right_margins">32dp</dimen>
     <dimen name="material_component_bottom_sheet_edge_top_bottom_margins">8dp</dimen>
     <dimen name="serchbar_top_bottom_margins">30dp</dimen>
     <dimen name="material_component_bottom_sheet_list_item_height">56dp</dimen>

@@ -1,6 +1,5 @@
 package com.ksballetba.ibus.ui.adapter
 
-import android.util.Log
 import com.baidu.mapapi.search.route.TransitRouteLine
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
@@ -16,7 +15,6 @@ class TransitRouteLinesAdapter(layoutResId:Int,data:List<TransitRouteLine>): Bas
         val minutes = item!!.duration/60
         var walkingDistance = 0
         val stepTitles = StringBuffer()
-        var totalPrice = 0
         var totalStationNum = 0
         var entrance = ""
         if(minutes>=60){
@@ -29,7 +27,6 @@ class TransitRouteLinesAdapter(layoutResId:Int,data:List<TransitRouteLine>): Bas
         item.allStep.forEachByIndex {
             if(it.vehicleInfo!=null){
                 stepTitles.append(it.vehicleInfo.title+"->")
-                totalPrice+=it.vehicleInfo.zonePrice
                 totalStationNum+=it.vehicleInfo.passStationNum
             }
             if(it.stepType == TransitRouteLine.TransitStep.TransitRouteStepType.WAKLING){
@@ -39,13 +36,14 @@ class TransitRouteLinesAdapter(layoutResId:Int,data:List<TransitRouteLine>): Bas
             }
         }
         stepTitles.delete(stepTitles.length-2,stepTitles.length)
-        if(walkingDistance>=1000){
-            helper?.setText(R.id.tvWalkingDistance,"${(walkingDistance/1000)}公里")
-        }else{
+        if(walkingDistance<=1000){
             helper?.setText(R.id.tvWalkingDistance,"${walkingDistance}米")
+        }else{
+            val distanceFormat = String.format("%.1f",walkingDistance.toFloat()/1000)
+            helper?.setText(R.id.tvWalkingDistance,"${distanceFormat}公里")
         }
 
         helper?.setText(R.id.tvRouteLineSteps,stepTitles)
-        helper?.setText(R.id.tvRouteLinePrice,"${totalStationNum}站·${totalPrice}元·${entrance}上车")
+        helper?.setText(R.id.tvRouteLinePrice,"${totalStationNum}站·${entrance}上车")
     }
 }

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/walking_step_card_height"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <ImageView
+            android:id="@+id/ivOtherStepType"
+            android:layout_width="@dimen/material_layout_icon"
+            android:layout_height="@dimen/material_layout_icon"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/view"
+            android:layout_marginStart="@dimen/material_component_bottom_sheet_edge_left_right_margins"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+
+    <TextView
+            android:id="@+id/tvOtherStepInstruction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/secondary_text"
+            android:layout_marginStart="@dimen/material_component_bottom_sheet_edge_left_right_margins"
+            app:layout_constraintBottom_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivOtherStepType"
+            app:layout_constraintTop_toBottomOf="parent"/>
+
+</android.support.constraint.ConstraintLayout>

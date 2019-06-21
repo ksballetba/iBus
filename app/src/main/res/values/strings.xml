@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">iMap</string>
     <string name="nav_menu_collection">收藏</string>
+    <string name="collection">收藏夹</string>
     <string name="nav_menu_score">积分</string>
     <string name="nav_menu_setting">设置</string>
     <string name="search">搜索</string>

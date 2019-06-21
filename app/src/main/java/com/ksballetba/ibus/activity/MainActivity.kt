@@ -1,6 +1,7 @@
 package com.ksballetba.ibus.activity
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.arch.lifecycle.Observer
 import android.content.Intent
 import android.graphics.Point
@@ -14,6 +15,7 @@ import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
+import com.apkfuns.logutils.LogUtils
 import com.baidu.location.*
 import com.baidu.mapapi.map.*
 import com.baidu.mapapi.model.LatLng
@@ -23,6 +25,7 @@ import com.baidu.mapapi.search.core.PoiDetailInfo
 import com.baidu.mapapi.search.core.PoiInfo
 import com.baidu.mapapi.search.core.SearchResult
 import com.baidu.mapapi.search.poi.*
+import com.blankj.utilcode.util.ScreenUtils
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.ksballetba.ibus.R
 import com.ksballetba.ibus.data.entity.CollectedPoiEntity
@@ -30,6 +33,7 @@ import com.ksballetba.ibus.data.source.local.AppDataBaseHelper
 import com.ksballetba.ibus.data.source.remote.BusLineDataRepository
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.BUS_LINE
+import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.SUBWAY_LINE
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentCity
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentLatLng
 import com.ksballetba.ibus.ui.adapter.SuggestPoisAdapter
@@ -50,6 +54,7 @@ class MainActivity : AppCompatActivity() {
         val TAG = "MainActivity"
         val QUERY = "QUERY"
         val MARKED_PLACE_ID = "MARK_PLACE_ID"
+        val COLLECTED_POI = "COLLECTED_POI"
         val IS_SEARCH_NEARBY = "IS_SEARCH_NEARBY"
         val COOR_TYPE = "bd09ll"
     }
@@ -117,7 +122,20 @@ class MainActivity : AppCompatActivity() {
                 mSelectedPoi = null
                 mBaiduMap.clear()
             }
-        } else {
+        }else if(intent?.getParcelableExtra<PoiInfo>(COLLECTED_POI)!=null){
+            val poiInfo = intent.getParcelableExtra<PoiInfo>(COLLECTED_POI)
+            if(dlMain.isDrawerOpen(GravityCompat.START)){
+                dlMain.closeDrawer(GravityCompat.START)
+            }
+            mBottomBehavior.peekHeight = dip(100)
+            mBottomBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            mSuggestPoisList.clear()
+            mSuggestPoisList.add(poiInfo)
+            mSuggestPoisAdapter.setNewData(mSuggestPoisList)
+            mSelectedPoi = poiInfo
+            markPlace(poiInfo.location)
+            navigateTo(poiInfo.location)
+        } else{
             mBottomBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             mSelectedPoi = null
             mMarkedPlaceId = -1
@@ -161,7 +179,6 @@ class MainActivity : AppCompatActivity() {
         mBaiduMap = mvMain.map
         mBaiduMap.isTrafficEnabled = true
         mBaiduMap.isMyLocationEnabled = true
-        mvMain.showZoomControls(false)
         mBaiduMap.compassPosition = Point(dip(30), dip(120))
         mLocationClient = LocationClient(applicationContext)
         val option = LocationClientOption()
@@ -182,7 +199,8 @@ class MainActivity : AppCompatActivity() {
         nvMain.setNavigationItemSelectedListener {
             when (it.itemId) {
                 R.id.nav_collection -> {
-
+                    val intent = Intent(this,CollectionActivity::class.java)
+                    startActivity(intent)
                 }
                 R.id.nav_setting -> {
 
@@ -221,6 +239,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+    @SuppressLint("RestrictedApi")
     private fun initBottomSheet() {
         val bottomSheet = findViewById<View>(R.id.cvPois)
         mBottomBehavior = BottomSheetBehavior.from(bottomSheet)
@@ -235,6 +255,7 @@ class MainActivity : AppCompatActivity() {
                         fabMyLocation.hide()
                         fabDirection.hide()
                         fabCollect.visibility = View.VISIBLE
+                        mvMain.showZoomControls(false)
                     }
                     BottomSheetBehavior.STATE_HIDDEN -> {
                         fabMyLocation.show()
@@ -243,6 +264,7 @@ class MainActivity : AppCompatActivity() {
                         mQuery = null
                         mSelectedPoi = null
                         supportActionBar?.title = resources.getString(R.string.search_hint)
+                        mvMain.showZoomControls(true)
                         mBaiduMap.clear()
                     }
                 }
@@ -267,7 +289,7 @@ class MainActivity : AppCompatActivity() {
                         mBaiduMap.clear()
                         val markedPoi = mSuggestPoisList[mMarkedPlaceId]
                         mSelectedPoi = markedPoi
-                        if(mSelectedPoi?.getPoiDetailInfo()?.tag!=PoiDataRepository.BUS_LINE){
+                        if(mSelectedPoi?.getPoiDetailInfo()?.tag!=PoiDataRepository.BUS_LINE&&mSelectedPoi?.getPoiDetailInfo()?.tag!= SUBWAY_LINE){
                             markPlace(markedPoi.location)
                             navigateTo(markedPoi.location)
                         }else{
@@ -308,7 +330,7 @@ class MainActivity : AppCompatActivity() {
                 val poiDetailInfo = PoiDetailInfo()
                 poiDetailInfo.tag = "地点"
                 poiInfo.setPoiDetailInfo(poiDetailInfo)
-                mBottomBehavior.peekHeight = dip(56)
+                mBottomBehavior.peekHeight = dip(100)
                 mBottomBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
                 mSuggestPoisList.clear()
                 mSuggestPoisList.add(poiInfo)
@@ -332,15 +354,16 @@ class MainActivity : AppCompatActivity() {
         mSuggestPoisAdapter.setOnItemClickListener { _, _, position ->
             mBaiduMap.clear()
             mSelectedPoi = mSuggestPoisList[position]
-            if(mSelectedPoi?.getPoiDetailInfo()?.tag!= BUS_LINE){
+            if(mSelectedPoi?.getPoiDetailInfo()?.tag!= BUS_LINE&&mSelectedPoi?.getPoiDetailInfo()?.tag!= SUBWAY_LINE){
                 markPlace(mSuggestPoisList[position].location)
                 navigateTo(mSuggestPoisList[position].location)
             }else{
                 mBusLineDataRepository.startBusLineSearch(currentCity,mSelectedPoi?.uid)
             }
         }
-        mSuggestPoisAdapter.setOnItemChildClickListener { adapter, view, position ->
-            backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area)
+        mSuggestPoisAdapter.setOnItemChildClickListener { _, _, position ->
+            backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area
+            ,mSuggestPoisList[position].location.latitude,mSuggestPoisList[position].location.longitude)
         }
     }
 
@@ -403,11 +426,13 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun backToRouteActivity(poiName:String?,poiCity:String?,poiAera:String?){
+    private fun backToRouteActivity(poiName:String?,poiCity:String?,poiAera:String?,poiLantitude:Double?,poiLongitude:Double?){
         val intent = Intent(this,RouteActivity::class.java)
         intent.putExtra(RouteActivity.POI_NAME,poiName)
         intent.putExtra(RouteActivity.POI_CITY,poiCity)
         intent.putExtra(RouteActivity.POI_AREA,poiAera)
+        intent.putExtra(RouteActivity.POI_LATITUDE,poiLantitude)
+        intent.putExtra(RouteActivity.POI_LONGITUDE,poiLongitude)
         startActivity(intent)
     }
 

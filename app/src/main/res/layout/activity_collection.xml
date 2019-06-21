@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.CoordinatorLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true"
+        tools:context=".activity.CollectionActivity">
+
+    <android.support.design.widget.AppBarLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+        <android.support.v7.widget.Toolbar
+                android:id="@+id/tbCollection"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/material_layout_app_bar_height"
+                app:title=""
+                app:navigationIcon="@drawable/ic_arrow_back_grey_800_24dp"
+                android:theme="@style/ThemeOverlay.AppCompat.Dark"
+                app:popupTheme="@style/Base.ThemeOverlay.AppCompat.Light">
+
+            <TextView
+                    android:id="@+id/tvCollectionTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/collection"
+                    android:textColor="@color/primary_text"
+                    android:layout_gravity="center"
+                    android:textSize="@dimen/material_typography_title"/>
+
+        </android.support.v7.widget.Toolbar>
+
+    </android.support.design.widget.AppBarLayout>
+
+    <android.support.v7.widget.RecyclerView
+            app:layout_behavior="android.support.design.widget.AppBarLayout$ScrollingViewBehavior"
+            android:id="@+id/rvCollections"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+    </android.support.v7.widget.RecyclerView>
+
+</android.support.design.widget.CoordinatorLayout>

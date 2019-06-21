@@ -66,13 +66,13 @@
 
         <android.support.design.widget.FloatingActionButton
                 android:id="@+id/fabCollect"
-                app:fabCustomSize="@dimen/material_component_floating_action_button_mini_size"
-                android:layout_width="@dimen/material_component_floating_action_button_mini_size"
-                android:layout_height="@dimen/material_component_floating_action_button_mini_size"
+                app:fabCustomSize="@dimen/material_component_floating_action_button_size"
+                android:layout_width="@dimen/material_component_floating_action_button_size"
+                android:layout_height="@dimen/material_component_floating_action_button_size"
                 app:layout_anchor="@id/cvPois"
                 app:layout_anchorGravity="top|end"
                 android:visibility="gone"
-                android:layout_marginEnd="@dimen/fab_left_right_margins"/>
+                android:layout_marginEnd="@dimen/material_component_floating_action_button_size"/>
 
 
         <android.support.v7.widget.CardView
