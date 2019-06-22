@@ -1,10 +1,12 @@
 package com.ksballetba.ibus.activity
 
 import android.arch.lifecycle.Observer
+import android.graphics.Color
 import android.graphics.Point
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.BottomSheetBehavior
+import android.support.v4.content.ContextCompat
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.util.Log
@@ -16,6 +18,7 @@ import com.baidu.location.LocationClient
 import com.baidu.location.LocationClientOption
 import com.baidu.mapapi.map.BaiduMap
 import com.baidu.mapapi.map.MapStatusUpdateFactory
+import com.baidu.mapapi.map.MyLocationConfiguration
 import com.baidu.mapapi.map.MyLocationData
 import com.baidu.mapapi.model.LatLng
 import com.baidu.mapapi.search.core.PoiInfo
@@ -28,6 +31,7 @@ import com.ksballetba.ibus.data.entity.CustomTransitStep
 import com.ksballetba.ibus.data.source.local.AppDataBaseHelper
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository
 import com.ksballetba.ibus.ui.adapter.TransitStepsAdapter
+import com.ksballetba.ibus.ui.listener.MyOrientationListener
 import com.ksballetba.ibus.util.CommonUtil
 import com.ksballetba.ibus.util.overlayutil.TransitRouteOverlay
 import io.reactivex.Completable
@@ -57,6 +61,9 @@ class TransitRouteLineDetailActivity : AppCompatActivity() {
     private val mAppDataBaseHelper: AppDataBaseHelper by lazy {
         AppDataBaseHelper.getInstance(applicationContext)
     }
+    private lateinit var mOrientationListener: MyOrientationListener
+    private var mCurrentLocation:BDLocation? = null
+    private var mAzimuth = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,9 +83,19 @@ class TransitRouteLineDetailActivity : AppCompatActivity() {
         mvTransitRouteLine.onResume()
     }
 
+    override fun onStart() {
+        super.onStart()
+        mOrientationListener.registerListener()
+    }
+
     override fun onPause() {
         super.onPause()
         mvTransitRouteLine.onPause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mOrientationListener.unregisterListener()
     }
 
     override fun onDestroy() {
@@ -114,12 +131,28 @@ class TransitRouteLineDetailActivity : AppCompatActivity() {
         option.coorType = MainActivity.COOR_TYPE
         option.locationMode = LocationClientOption.LocationMode.Hight_Accuracy
         mLocationClient.locOption = option
+        val myLocationConfiguration = MyLocationConfiguration(
+            MyLocationConfiguration.LocationMode.NORMAL,true,
+            null, Color.TRANSPARENT, ContextCompat.getColor(this,R.color.accent))
+        mBaiduMap.setMyLocationConfiguration(myLocationConfiguration)
         val myLocationListener = MyLocationListener()
         mLocationClient.registerLocationListener(myLocationListener)
+        mOrientationListener = MyOrientationListener(this)
+        mOrientationListener.setOnOrientationListener(object :MyOrientationListener.OnOrientationListener{
+            override fun onOrientationChanged(azimuth: Float, pitch: Float, roll: Float) {
+                mAzimuth = azimuth
+                if(mCurrentLocation!=null){
+                    val locData = MyLocationData.Builder()
+                        .accuracy(mCurrentLocation!!.radius)
+                        .direction(mAzimuth)
+                        .latitude(mCurrentLocation!!.latitude)
+                        .longitude(mCurrentLocation!!.longitude)
+                        .build()
+                    mBaiduMap.setMyLocationData(locData)
+                }
+            }
+        })
         mLocationClient.start()
-        mBaiduMap.setOnMapLoadedCallback {
-
-        }
     }
 
     private fun initFAB() {
@@ -214,13 +247,7 @@ class TransitRouteLineDetailActivity : AppCompatActivity() {
                 }
                 isZoomToSapn = false
             }
-            val locData = MyLocationData.Builder()
-                .accuracy(location.radius)
-                .direction(location.direction)
-                .latitude(location.latitude)
-                .longitude(location.longitude)
-                .build()
-            mBaiduMap.setMyLocationData(locData)
+            mCurrentLocation = location
         }
     }
 }

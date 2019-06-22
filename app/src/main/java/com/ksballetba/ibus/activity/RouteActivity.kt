@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.Observer
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Point
 import android.os.Build
 import android.support.v7.app.AppCompatActivity
@@ -22,6 +23,7 @@ import com.apkfuns.logutils.LogUtils
 import com.baidu.location.*
 import com.baidu.mapapi.map.BaiduMap
 import com.baidu.mapapi.map.MapStatusUpdateFactory
+import com.baidu.mapapi.map.MyLocationConfiguration
 import com.baidu.mapapi.map.MyLocationData
 import com.baidu.mapapi.model.LatLng
 import com.baidu.mapapi.search.core.PoiDetailInfo
@@ -45,6 +47,7 @@ import com.ksballetba.ibus.data.source.remote.RoutePlanDataRepository
 import com.ksballetba.ibus.ui.adapter.OtherStepsAdapter
 import com.ksballetba.ibus.ui.adapter.SurroundingsAdapter
 import com.ksballetba.ibus.ui.adapter.TransitRouteLinesAdapter
+import com.ksballetba.ibus.ui.listener.MyOrientationListener
 import com.ksballetba.ibus.util.CommonUtil
 import com.ksballetba.ibus.util.overlayutil.BikingRouteOverlay
 import com.ksballetba.ibus.util.overlayutil.DrivingRouteOverlay
@@ -98,6 +101,9 @@ class RouteActivity : AppCompatActivity() {
     private val mAppDataBaseHelper: AppDataBaseHelper by lazy {
         AppDataBaseHelper.getInstance(applicationContext)
     }
+    private lateinit var mOrientationListener: MyOrientationListener
+    private var mCurrentLocation:BDLocation? = null
+    private var mAzimuth = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -143,6 +149,11 @@ class RouteActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        mOrientationListener.registerListener()
+    }
+
     override fun onResume() {
         super.onResume()
         mvRoute.onResume()
@@ -151,6 +162,11 @@ class RouteActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         mvRoute.onPause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mOrientationListener.unregisterListener()
     }
 
     override fun onDestroy() {
@@ -359,8 +375,27 @@ class RouteActivity : AppCompatActivity() {
         option.locationMode = LocationClientOption.LocationMode.Hight_Accuracy
         option.setIsNeedAddress(true)
         mLocationClient.locOption = option
+        val myLocationConfiguration = MyLocationConfiguration(
+            MyLocationConfiguration.LocationMode.NORMAL,true,
+            null, Color.TRANSPARENT,ContextCompat.getColor(this,R.color.accent))
+        mBaiduMap.setMyLocationConfiguration(myLocationConfiguration)
         val myLocationListener = MyLocationListener()
         mLocationClient.registerLocationListener(myLocationListener)
+        mOrientationListener = MyOrientationListener(this)
+        mOrientationListener.setOnOrientationListener(object :MyOrientationListener.OnOrientationListener{
+            override fun onOrientationChanged(azimuth: Float, pitch: Float, roll: Float) {
+                mAzimuth = azimuth
+                if(mCurrentLocation!=null){
+                    val locData = MyLocationData.Builder()
+                        .accuracy(mCurrentLocation!!.radius)
+                        .direction(mAzimuth)
+                        .latitude(mCurrentLocation!!.latitude)
+                        .longitude(mCurrentLocation!!.longitude)
+                        .build()
+                    mBaiduMap.setMyLocationData(locData)
+                }
+            }
+        })
         mLocationClient.start()
     }
 
@@ -550,13 +585,7 @@ class RouteActivity : AppCompatActivity() {
                 navigateTo(latLng)
                 isFirstLocated = false
             }
-            val locData = MyLocationData.Builder()
-                .accuracy(location.radius)
-                .direction(location.direction)
-                .latitude(location.latitude)
-                .longitude(location.longitude)
-                .build()
-            mBaiduMap.setMyLocationData(locData)
+            mCurrentLocation = location
         }
     }
 

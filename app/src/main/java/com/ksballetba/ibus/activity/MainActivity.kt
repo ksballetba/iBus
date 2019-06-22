@@ -9,6 +9,7 @@ import android.graphics.Point
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.BottomSheetBehavior
+import android.support.v4.content.ContextCompat
 import android.support.v4.view.GravityCompat
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
@@ -156,11 +157,15 @@ class MainActivity : AppCompatActivity() {
         mvMain.onPause()
     }
 
+    override fun onStop() {
+        super.onStop()
+        mOrientationListener.unregisterListener()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         mLocationClient.stop()
         mvMain.onDestroy()
-        mOrientationListener.unregisterListener()
         mPoiDataRepository.destroy()
         mBusLineDataRepository.destroy()
         mBaiduMap.isMyLocationEnabled = false
@@ -199,7 +204,7 @@ class MainActivity : AppCompatActivity() {
         option.setIsNeedAddress(true)
         mLocationClient.locOption = option
         val myLocationConfiguration = MyLocationConfiguration(MyLocationConfiguration.LocationMode.NORMAL,true,
-            null, Color.TRANSPARENT,getColor(R.color.accent))
+            null, Color.TRANSPARENT, ContextCompat.getColor(this,R.color.accent))
         mBaiduMap.setMyLocationConfiguration(myLocationConfiguration)
         val myLocationListener = MyLocationListener()
         mLocationClient.registerLocationListener(myLocationListener)
