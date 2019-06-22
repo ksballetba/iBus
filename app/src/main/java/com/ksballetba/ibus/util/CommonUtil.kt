@@ -8,6 +8,7 @@ import com.baidu.mapapi.model.LatLng
 import com.baidu.mapapi.search.core.PoiDetailInfo
 import com.baidu.mapapi.search.core.PoiInfo
 import com.baidu.mapapi.search.route.TransitRouteLine
+import com.ksballetba.ibus.data.entity.CollectedLineEntity
 import com.ksballetba.ibus.data.entity.CollectedPoiEntity
 import com.ksballetba.ibus.data.entity.CustomTransitStep
 import org.jetbrains.anko.collections.forEachByIndex
@@ -57,6 +58,32 @@ object CommonUtil {
             result.add(poiInfo)
         }
         return result
+    }
+
+    fun ConvertLineToEntrancePoi(line:CollectedLineEntity):PoiInfo{
+        val mEntrancePoi = PoiInfo()
+        mEntrancePoi.uid = line.uid.split("->")[0]
+        mEntrancePoi.name = line.entranceName
+        mEntrancePoi.city = line.entranceCity
+        mEntrancePoi.location = LatLng(line.entranceLatitude!!,line.entranceLongitude!!)
+        mEntrancePoi.area = line.entranceArea
+        val poiDetailInfo = PoiDetailInfo()
+        poiDetailInfo.tag = line.entranceType
+        mEntrancePoi.poiDetailInfo = poiDetailInfo
+        return mEntrancePoi
+    }
+
+    fun ConvertLineToExitPoi(line:CollectedLineEntity):PoiInfo{
+        val mExitPoi = PoiInfo()
+        mExitPoi.uid = line.uid.split("->")[1]
+        mExitPoi.name = line.exitName
+        mExitPoi.city = line.exitCity
+        mExitPoi.location = LatLng(line.exitLatitude!!,line.exitLongitude!!)
+        mExitPoi.area = line.exitArea
+        val poiDetailInfo = PoiDetailInfo()
+        poiDetailInfo.tag = line.exitType
+        mExitPoi.poiDetailInfo = poiDetailInfo
+        return mExitPoi
     }
 
 }

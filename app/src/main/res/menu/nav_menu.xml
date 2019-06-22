@@ -6,7 +6,12 @@
             android:title="@string/nav_menu_collection"/>
 
     <item
-            android:id="@+id/nav_setting"
-            android:icon="@drawable/ic_settings_black_24dp"
-            android:title="@string/nav_menu_setting"/>
+            android:id="@+id/nav_change_map"
+            android:icon="@drawable/ic_map_black_24dp"
+            android:title="@string/nav_menu_map_change_satellite"/>
+
+    <item
+            android:id="@+id/nav_compass"
+            android:icon="@drawable/ic_explore_black_24dp"
+            android:title="@string/nav_menu_map_navigation_compass"/>
 </menu>

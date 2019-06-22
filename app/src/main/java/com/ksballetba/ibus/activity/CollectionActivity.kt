@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.v4.app.Fragment
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.text.TextUtils
@@ -13,17 +14,23 @@ import android.view.View
 import com.baidu.mapapi.search.core.PoiInfo
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.ksballetba.ibus.R
+import com.ksballetba.ibus.data.entity.CollectedLineEntity
 import com.ksballetba.ibus.data.entity.CollectedPoiEntity
 import com.ksballetba.ibus.data.source.local.AppDataBaseHelper
 import com.ksballetba.ibus.ui.adapter.SuggestPoisAdapter
+import com.ksballetba.ibus.ui.adapter.ViewPagerAdapter
+import com.ksballetba.ibus.ui.fragment.LinesCollectionFragment
+import com.ksballetba.ibus.ui.fragment.PoisCollectionFragment
 import com.ksballetba.ibus.util.CommonUtil
 import kotlinx.android.synthetic.main.activity_collection.*
 
 class CollectionActivity : AppCompatActivity() {
 
-    private lateinit var mCollectedPoisAdapter: SuggestPoisAdapter
-    private var mCollectedPoiList = mutableListOf<PoiInfo>()
-    private val mAppDataBaseHelper: AppDataBaseHelper by lazy {
+    private lateinit var mPoisCollectionFragment:Fragment
+    private lateinit var mLinesCOllectionFragment:Fragment
+    private val mFragmentList = mutableListOf<Fragment>()
+
+    val mAppDataBaseHelper: AppDataBaseHelper by lazy {
         AppDataBaseHelper.getInstance(applicationContext)
     }
 
@@ -34,7 +41,7 @@ class CollectionActivity : AppCompatActivity() {
         }
         setContentView(R.layout.activity_collection)
         initToolbar()
-        initCollectedPoisRec()
+        initFragments()
     }
 
     private fun initToolbar(){
@@ -50,40 +57,34 @@ class CollectionActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private fun initCollectedPoisRec(){
-        val layoutManager = LinearLayoutManager(this)
-        layoutManager.orientation = RecyclerView.VERTICAL
-        rvCollections.layoutManager = layoutManager
-        mCollectedPoisAdapter = SuggestPoisAdapter(R.layout.layout_suggest_poi_item,mCollectedPoiList)
-        mCollectedPoisAdapter.openLoadAnimation(BaseQuickAdapter.ALPHAIN)
-        rvCollections.adapter = mCollectedPoisAdapter
-        mCollectedPoisAdapter.setOnItemClickListener { _, _, position ->
-            backToMainActivity(mCollectedPoiList[position])
-        }
-        mCollectedPoisAdapter.setOnItemChildClickListener { _, _, position ->
-            backToRouteActivity(mCollectedPoiList[position].name,mCollectedPoiList[position].city,mCollectedPoiList[position].area
-                ,mCollectedPoiList[position].location.latitude,mCollectedPoiList[position].location.longitude)
-        }
-        mAppDataBaseHelper.queryAllPois().observe(this, Observer{
-            mCollectedPoiList = CommonUtil.convertToPoiInfoList(it).toMutableList()
-            mCollectedPoisAdapter.setNewData(mCollectedPoiList)
-        })
+    private fun initFragments(){
+        mPoisCollectionFragment = PoisCollectionFragment()
+        mLinesCOllectionFragment = LinesCollectionFragment()
+        mFragmentList.add(mPoisCollectionFragment)
+        mFragmentList.add(mLinesCOllectionFragment)
+        vpCollection.adapter = ViewPagerAdapter(mFragmentList,supportFragmentManager)
+        tabCollection.setupWithViewPager(vpCollection)
+        tabCollection.getTabAt(0)?.setIcon(R.drawable.ic_place_grey_800_24dp)
+        tabCollection.getTabAt(1)?.setIcon(R.drawable.ic_subdirectory_arrow_right_grey_800_24dp)
     }
 
-    private fun backToMainActivity(collectionPoi:PoiInfo?){
+
+    fun backToMainActivity(collectionPoi:PoiInfo?){
         val intent = Intent(this, MainActivity::class.java)
         intent.putExtra(MainActivity.COLLECTED_POI, collectionPoi)
         startActivity(intent)
         finish()
     }
 
-    private fun backToRouteActivity(poiName:String?,poiCity:String?,poiAera:String?,poiLantitude:Double?,poiLongitude:Double?){
+    fun backToRouteActivity(poi:PoiInfo?){
         val intent = Intent(this,RouteActivity::class.java)
-        intent.putExtra(RouteActivity.POI_NAME,poiName)
-        intent.putExtra(RouteActivity.POI_CITY,poiCity)
-        intent.putExtra(RouteActivity.POI_AREA,poiAera)
-        intent.putExtra(RouteActivity.POI_LATITUDE,poiLantitude)
-        intent.putExtra(RouteActivity.POI_LONGITUDE,poiLongitude)
+        intent.putExtra(RouteActivity.POI,poi)
+        startActivity(intent)
+    }
+
+    fun backToRouteActivity(collectionLine:CollectedLineEntity){
+        val intent = Intent(this,RouteActivity::class.java)
+        intent.putExtra(RouteActivity.LINE,collectionLine)
         startActivity(intent)
     }
 

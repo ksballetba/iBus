@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.arch.lifecycle.Observer
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Point
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
@@ -13,6 +14,7 @@ import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.MenuItem
+import android.view.OrientationEventListener
 import android.view.View
 import android.view.WindowManager
 import com.apkfuns.logutils.LogUtils
@@ -34,9 +36,9 @@ import com.ksballetba.ibus.data.source.remote.BusLineDataRepository
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.BUS_LINE
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.SUBWAY_LINE
-import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentCity
-import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentLatLng
+import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentLocation
 import com.ksballetba.ibus.ui.adapter.SuggestPoisAdapter
+import com.ksballetba.ibus.ui.listener.MyOrientationListener
 import com.ksballetba.ibus.util.CommonUtil
 import com.ksballetba.ibus.util.overlayutil.BusLineOverlay
 import com.tbruyelle.rxpermissions2.RxPermissions
@@ -82,6 +84,9 @@ class MainActivity : AppCompatActivity() {
     private var mMarkedPlaceId: Int = -1
     private var mSelectedPoi:PoiInfo? = null
     private var mIsPoiCollected:Boolean = false
+    private lateinit var mOrientationListener: MyOrientationListener
+    private var mCurrentLocation:BDLocation? = null
+    private var mAzimuth = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,8 +96,6 @@ class MainActivity : AppCompatActivity() {
         requestPermissions()
         initToolbar()
         initFAB()
-        initPoiSearchListener()
-        initOnMapClickListener()
         initBottomSheet()
         initSuggestPoisRec()
     }
@@ -110,9 +113,9 @@ class MainActivity : AppCompatActivity() {
             mBottomBehavior.peekHeight = dip(220)
             mQuery = intent.getStringExtra(QUERY)
             if(intent.getBooleanExtra(IS_SEARCH_NEARBY,false)){
-                mPoiDataRepository.startNearbyPoiSearch(currentLatLng,mQuery)
+                mPoiDataRepository.startNearbyPoiSearch(LatLng(currentLocation?.latitude!!, currentLocation?.longitude!!) ,mQuery)
             }else{
-                mPoiDataRepository.startPoiSearch(currentCity,mQuery)
+                mPoiDataRepository.startPoiSearch(currentLocation?.city,mQuery)
             }
             supportActionBar?.title = mQuery
             if (intent.getIntExtra(MARKED_PLACE_ID,-1) != -1) {
@@ -143,6 +146,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        mOrientationListener.registerListener()
+    }
+
     override fun onPause() {
         super.onPause()
         mvMain.onPause()
@@ -152,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         mLocationClient.stop()
         mvMain.onDestroy()
+        mOrientationListener.unregisterListener()
         mPoiDataRepository.destroy()
         mBusLineDataRepository.destroy()
         mBaiduMap.isMyLocationEnabled = false
@@ -189,8 +198,26 @@ class MainActivity : AppCompatActivity() {
         option.locationMode = LocationClientOption.LocationMode.Hight_Accuracy
         option.setIsNeedAddress(true)
         mLocationClient.locOption = option
+        val myLocationConfiguration = MyLocationConfiguration(MyLocationConfiguration.LocationMode.NORMAL,true,
+            null, Color.TRANSPARENT,getColor(R.color.accent))
+        mBaiduMap.setMyLocationConfiguration(myLocationConfiguration)
         val myLocationListener = MyLocationListener()
         mLocationClient.registerLocationListener(myLocationListener)
+        mOrientationListener = MyOrientationListener(this)
+        mOrientationListener.setOnOrientationListener(object :MyOrientationListener.OnOrientationListener{
+            override fun onOrientationChanged(azimuth: Float, pitch: Float, roll: Float) {
+                mAzimuth = azimuth
+                if(mCurrentLocation!=null){
+                    val locData = MyLocationData.Builder()
+                        .accuracy(mCurrentLocation!!.radius)
+                        .direction(mAzimuth)
+                        .latitude(mCurrentLocation!!.latitude)
+                        .longitude(mCurrentLocation!!.longitude)
+                        .build()
+                    mBaiduMap.setMyLocationData(locData)
+                }
+            }
+        })
         mLocationClient.start()
     }
 
@@ -202,8 +229,33 @@ class MainActivity : AppCompatActivity() {
                     val intent = Intent(this,CollectionActivity::class.java)
                     startActivity(intent)
                 }
-                R.id.nav_setting -> {
+                R.id.nav_change_map -> {
+                    if(mBaiduMap.mapType == BaiduMap.MAP_TYPE_NORMAL){
+                        nvMain.menu.getItem(1).title = getString(R.string.nav_menu_map_change_normal)
+                        mBaiduMap.mapType = BaiduMap.MAP_TYPE_SATELLITE
+                    }else{
+                        nvMain.menu.getItem(1).title = getString(R.string.nav_menu_map_change_satellite)
+                        mBaiduMap.mapType = BaiduMap.MAP_TYPE_NORMAL
+                    }
+                    dlMain.closeDrawer(GravityCompat.START)
+                }
 
+                R.id.nav_compass->{
+                    if(mBaiduMap.locationConfiguration.locationMode == MyLocationConfiguration.LocationMode.NORMAL){
+                        nvMain.menu.getItem(2).title = getString(R.string.nav_menu_map_navigation_normal)
+                        val myLocationConfiguration = MyLocationConfiguration(MyLocationConfiguration.LocationMode.COMPASS,true,
+                            null, Color.TRANSPARENT,getColor(R.color.accent))
+                        mBaiduMap.setMyLocationConfiguration(myLocationConfiguration)
+                    }else{
+                        nvMain.menu.getItem(2).title = getString(R.string.nav_menu_map_navigation_compass)
+                        val myLocationConfiguration = MyLocationConfiguration(MyLocationConfiguration.LocationMode.NORMAL,true,
+                            null, Color.TRANSPARENT,getColor(R.color.accent))
+                        mBaiduMap.setMyLocationConfiguration(myLocationConfiguration)
+                        val status = MapStatus.Builder(mBaiduMap.mapStatus).overlook(0f).rotate(0f).build()
+                        val update = MapStatusUpdateFactory.newMapStatus(status)
+                        mBaiduMap.animateMapStatus(update);
+                    }
+                    dlMain.closeDrawer(GravityCompat.START)
                 }
             }
             true
@@ -293,7 +345,7 @@ class MainActivity : AppCompatActivity() {
                             markPlace(markedPoi.location)
                             navigateTo(markedPoi.location)
                         }else{
-                            mBusLineDataRepository.startBusLineSearch(currentCity,mSelectedPoi?.uid)
+                            mBusLineDataRepository.startBusLineSearch(currentLocation?.city,mSelectedPoi?.uid)
                         }
                     }
                 }
@@ -323,7 +375,7 @@ class MainActivity : AppCompatActivity() {
                 val poiInfo = PoiInfo()
                 poiInfo.uid = mapPoi?.uid
                 poiInfo.name = mapPoi?.name
-                poiInfo.city = currentCity
+                poiInfo.city = currentLocation?.city
                 poiInfo.location = mapPoi?.position
                 poiInfo.address = ""
                 poiInfo.area = ""
@@ -342,6 +394,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
         mBaiduMap.setOnMapClickListener(mOnMapClickListener)
+        mBaiduMap.setOnMapLoadedCallback {
+            mvMain.setZoomControlsPosition(Point(ScreenUtils.getScreenWidth()-180,ScreenUtils.getScreenHeight()/2))
+        }
     }
 
     private fun initSuggestPoisRec() {
@@ -358,12 +413,11 @@ class MainActivity : AppCompatActivity() {
                 markPlace(mSuggestPoisList[position].location)
                 navigateTo(mSuggestPoisList[position].location)
             }else{
-                mBusLineDataRepository.startBusLineSearch(currentCity,mSelectedPoi?.uid)
+                mBusLineDataRepository.startBusLineSearch(currentLocation?.city,mSelectedPoi?.uid)
             }
         }
         mSuggestPoisAdapter.setOnItemChildClickListener { _, _, position ->
-            backToRouteActivity(mSuggestPoisList[position].name,mSuggestPoisList[position].city,mSuggestPoisList[position].area
-            ,mSuggestPoisList[position].location.latitude,mSuggestPoisList[position].location.longitude)
+            backToRouteActivity(mSuggestPoisList[position])
         }
     }
 
@@ -377,7 +431,10 @@ class MainActivity : AppCompatActivity() {
             .subscribe {
                 if (it) {
                     initMap()
+                    initPoiSearchListener()
+                    initOnMapClickListener()
                 } else {
+                    toast(getString(R.string.err_no_permission_access))
                     requestPermissions()
                 }
             }
@@ -426,13 +483,9 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun backToRouteActivity(poiName:String?,poiCity:String?,poiAera:String?,poiLantitude:Double?,poiLongitude:Double?){
+    private fun backToRouteActivity(poiInfo: PoiInfo?){
         val intent = Intent(this,RouteActivity::class.java)
-        intent.putExtra(RouteActivity.POI_NAME,poiName)
-        intent.putExtra(RouteActivity.POI_CITY,poiCity)
-        intent.putExtra(RouteActivity.POI_AREA,poiAera)
-        intent.putExtra(RouteActivity.POI_LATITUDE,poiLantitude)
-        intent.putExtra(RouteActivity.POI_LONGITUDE,poiLongitude)
+        intent.putExtra(RouteActivity.POI,poiInfo)
         startActivity(intent)
     }
 
@@ -448,19 +501,12 @@ class MainActivity : AppCompatActivity() {
                 toast(getString(R.string.err_no_network_service))
             }
             if (isFirstLocated) {
-                currentCity = location.city
+                currentLocation = location
                 val latLng = LatLng(location.latitude, location.longitude)
                 navigateTo(latLng)
                 isFirstLocated = false
-                currentLatLng = latLng
             }
-            val locData = MyLocationData.Builder()
-                .accuracy(location.radius)
-                .direction(location.direction)
-                .latitude(location.latitude)
-                .longitude(location.longitude)
-                .build()
-            mBaiduMap.setMyLocationData(locData)
+            mCurrentLocation = location
         }
     }
 }

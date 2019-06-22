@@ -3,11 +3,12 @@
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/walking_step_card_height"
+        android:layout_height="@dimen/material_component_bottom_sheet_list_item_height"
         xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <ImageView
-            android:id="@+id/ivOtherStepType"
+            android:id="@+id/ivCollectionLineIcon"
+            android:src="@drawable/ic_subdirectory_arrow_right_grey_800_24dp"
             android:layout_width="@dimen/material_layout_icon"
             android:layout_height="@dimen/material_layout_icon"
             app:layout_constraintTop_toTopOf="parent"
@@ -17,13 +18,13 @@
             app:layout_constraintBottom_toBottomOf="parent"/>
 
     <TextView
-            android:id="@+id/tvOtherStepInstruction"
+            android:id="@+id/tvCollectionLineTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/secondary_text"
             android:layout_marginStart="@dimen/material_component_bottom_sheet_edge_left_right_margins"
             app:layout_constraintBottom_toTopOf="parent"
-            app:layout_constraintStart_toEndOf="@id/ivOtherStepType"
+            app:layout_constraintStart_toEndOf="@id/ivCollectionLineIcon"
             app:layout_constraintTop_toBottomOf="parent"/>
 
 </android.support.constraint.ConstraintLayout>

@@ -1,6 +1,7 @@
 package com.ksballetba.ibus.ui.adapter
 
 import android.util.Log
+import com.baidu.mapapi.model.LatLng
 import com.baidu.mapapi.search.core.PoiInfo
 import com.baidu.mapapi.utils.DistanceUtil
 import com.chad.library.adapter.base.BaseQuickAdapter
@@ -11,7 +12,7 @@ import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.BUS_LI
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.BUS_STATION
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.SUBWAY_LINE
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.SUBWAY_STATION
-import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentLatLng
+import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentLocation
 
 class SuggestPoisAdapter(layoutResId:Int,data:List<PoiInfo>):BaseQuickAdapter<PoiInfo,BaseViewHolder>(layoutResId,data) {
 
@@ -20,7 +21,7 @@ class SuggestPoisAdapter(layoutResId:Int,data:List<PoiInfo>):BaseQuickAdapter<Po
     }
     override fun convert(helper: BaseViewHolder?, item: PoiInfo?) {
         helper?.setText(R.id.tvPoiName,item?.name)
-        val distance = DistanceUtil.getDistance(currentLatLng,item?.location)/1000
+        val distance = DistanceUtil.getDistance(LatLng(currentLocation!!.latitude, currentLocation!!.longitude),item?.location)/1000
         val distanceFormat = String.format("%.1f",distance)
         helper?.setText(R.id.tvPoiAddress,"[${distanceFormat}km]${item?.address}")
         when(item?.getPoiDetailInfo()?.tag){

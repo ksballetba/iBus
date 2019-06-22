@@ -19,27 +19,28 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import com.apkfuns.logutils.LogUtils
-import com.baidu.location.BDAbstractLocationListener
-import com.baidu.location.BDLocation
-import com.baidu.location.LocationClient
-import com.baidu.location.LocationClientOption
+import com.baidu.location.*
 import com.baidu.mapapi.map.BaiduMap
 import com.baidu.mapapi.map.MapStatusUpdateFactory
 import com.baidu.mapapi.map.MyLocationData
 import com.baidu.mapapi.model.LatLng
+import com.baidu.mapapi.search.core.PoiDetailInfo
+import com.baidu.mapapi.search.core.PoiInfo
 import com.baidu.mapapi.search.route.*
 import com.blankj.utilcode.util.ToastUtils
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.facebook.stetho.common.LogUtil
 import com.google.gson.Gson
 import com.ksballetba.ibus.R
+import com.ksballetba.ibus.data.entity.CollectedLineEntity
 import com.ksballetba.ibus.data.entity.CustomOtherStep
 import com.ksballetba.ibus.data.entity.CustomOtherStep.Companion.BIKING_TYPE
 import com.ksballetba.ibus.data.entity.CustomOtherStep.Companion.DRIVING_TYPE
 import com.ksballetba.ibus.data.entity.CustomOtherStep.Companion.WALKING_TYPE
+import com.ksballetba.ibus.data.source.local.AppDataBaseHelper
 import com.ksballetba.ibus.data.source.remote.PoiDataRepository
-import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentCity
-import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentLatLng
+import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.POINT
+import com.ksballetba.ibus.data.source.remote.PoiDataRepository.Companion.currentLocation
 import com.ksballetba.ibus.data.source.remote.RoutePlanDataRepository
 import com.ksballetba.ibus.ui.adapter.OtherStepsAdapter
 import com.ksballetba.ibus.ui.adapter.SurroundingsAdapter
@@ -48,6 +49,9 @@ import com.ksballetba.ibus.util.CommonUtil
 import com.ksballetba.ibus.util.overlayutil.BikingRouteOverlay
 import com.ksballetba.ibus.util.overlayutil.DrivingRouteOverlay
 import com.ksballetba.ibus.util.overlayutil.WalkingRouteOverlay
+import io.reactivex.Completable
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.activity_route.*
 import org.jetbrains.anko.collections.forEachByIndex
 import org.jetbrains.anko.dip
@@ -59,12 +63,12 @@ class RouteActivity : AppCompatActivity() {
         const val TAG = "RouteActivity"
         const val IS_ROUTE_SEARCH = "IS_ROUTE_SEARCH"
         const val IS_START_POI = "IS_START_POI"
-        const val POI_NAME = "POI_NAME"
-        const val POI_CITY = "POI_CITY"
-        const val POI_AREA = "POI_AREA"
-        const val POI_LATITUDE = "POI_LATITUDE"
-        const val POI_LONGITUDE = "POI_LONGITUDE"
+        const val POI = "POI"
+        const val LINE = "LINE"
+        const val MY_LOCATION = "我的位置"
         const val TRANSIT_ROUTE_LINE = "TRANSIT_ROUTE_LINE"
+        const val ENTRANCE_POI = "ENTRANCE_POI"
+        const val EXIT_POI = "EXIT_POI"
         const val SEARCH_BY_TRANSIT = 0
         const val SEARCH_BY_DRIVING = 1
         const val SEARCH_BY_WALKING = 2
@@ -85,9 +89,15 @@ class RouteActivity : AppCompatActivity() {
     private var mTransitRouteLineList = mutableListOf<TransitRouteLine>()
     private var mStartNodeTitle = MutableLiveData<String>()
     private var mEndNodeTitle = MutableLiveData<String>()
+    private var mEntrancePoi:PoiInfo? = null
+    private var mExitPoi:PoiInfo? = null
     private lateinit var mBottomBehavior: BottomSheetBehavior<View>
     private lateinit var mOtherStepAdapter:OtherStepsAdapter
     private var mOtherStepList = mutableListOf<CustomOtherStep>()
+    private var mIsLineCollected = false
+    private val mAppDataBaseHelper: AppDataBaseHelper by lazy {
+        AppDataBaseHelper.getInstance(applicationContext)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,41 +113,27 @@ class RouteActivity : AppCompatActivity() {
         initTransitRouteLinesRec()
         initOtherStepRec()
         initBottomSheet()
-        mStartNode = PlanNode.withLocation(PoiDataRepository.currentLatLng)
-        mStartNodeTitle.value = getString(R.string.default_start)
-        mEndNodeTitle.value = getString(R.string.input_end)
-        val poiName = intent?.getStringExtra(POI_NAME)
-        val poiCity = intent?.getStringExtra(POI_CITY)
-        val poiArea = intent?.getStringExtra(POI_AREA)
-        val poiLatitude = intent?.getDoubleExtra(POI_LATITUDE, (-1).toDouble())
-        val poiLongitude = intent?.getDoubleExtra(POI_LONGITUDE, (-1).toDouble())
-        if (poiName != null) {
-            mEndNodeTitle.postValue("$poiName $poiCity$poiArea")
-            mEndNode = PlanNode.withLocation(LatLng(poiLatitude!!, poiLongitude!!))
-            startSearch(tabRoute.selectedTabPosition)
-        }
+        handleNode()
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val poiName = intent?.getStringExtra(POI_NAME)
-        val poiCity = intent?.getStringExtra(POI_CITY)
-        val poiArea = intent?.getStringExtra(POI_AREA)
-        val poiLatitude = intent?.getDoubleExtra(POI_LATITUDE, (-1).toDouble())
-        val poiLongitude = intent?.getDoubleExtra(POI_LONGITUDE, (-1).toDouble())
+        val poi = intent?.getParcelableExtra<PoiInfo>(POI)
         if (mIsStartPoi) {
-            if (poiName != null) {
-                mStartNodeTitle.postValue("$poiName $poiCity$poiArea")
-                mStartNode = PlanNode.withLocation(LatLng(poiLatitude!!, poiLongitude!!))
+            if (poi != null) {
+                mStartNodeTitle.postValue("${poi.name} ${poi.city}${poi.area}")
+                mStartNode = PlanNode.withLocation(LatLng(poi.location.latitude,poi.location.longitude))
+                mEntrancePoi = poi
             } else {
                 mStartNodeTitle.postValue(getString(R.string.default_start))
-                mStartNode = PlanNode.withLocation(PoiDataRepository.currentLatLng)
+                mStartNode = PlanNode.withLocation(LatLng(currentLocation!!.latitude, currentLocation!!.longitude))
             }
         } else {
-            if (poiName != null) {
-                mEndNodeTitle.postValue("$poiName $poiCity$poiArea")
-                mEndNode = PlanNode.withLocation(LatLng(poiLatitude!!, poiLongitude!!))
+            if (poi != null) {
+                mEndNodeTitle.postValue("${poi.name} ${poi.city}${poi.area}")
+                mEndNode = PlanNode.withLocation(LatLng(poi.location.latitude,poi.location.longitude))
+                mExitPoi = poi
             } else {
                 mEndNodeTitle.postValue(getString(R.string.input_end))
             }
@@ -179,6 +175,9 @@ class RouteActivity : AppCompatActivity() {
                     val tmp = mStartNodeTitle.value
                     mStartNodeTitle.postValue(mEndNodeTitle.value)
                     mEndNodeTitle.postValue(tmp)
+                    val tmpPoi = mEntrancePoi
+                    mEntrancePoi = mExitPoi
+                    mExitPoi = tmpPoi
                     startSearch(tabRoute.selectedTabPosition)
                 } else {
                     toast(getString(R.string.err_no_endnode_result))
@@ -191,6 +190,57 @@ class RouteActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.route_menu, menu)
         return true
+    }
+
+    private fun handleNode(){
+        mStartNode = PlanNode.withLocation(LatLng(currentLocation!!.latitude, currentLocation!!.longitude))
+        mEntrancePoi = PoiInfo()
+        mEntrancePoi?.uid = MY_LOCATION
+        mEntrancePoi?.name = currentLocation?.addrStr
+        mEntrancePoi?.city = currentLocation?.city
+        mEntrancePoi?.location = LatLng(currentLocation!!.latitude,currentLocation!!.latitude)
+        mEntrancePoi?.area = currentLocation?.district
+        val poiDetailInfo = PoiDetailInfo()
+        poiDetailInfo.tag = POINT
+        mEntrancePoi?.poiDetailInfo = poiDetailInfo
+        mStartNodeTitle.value = getString(R.string.default_start)
+        mEndNodeTitle.value = getString(R.string.input_end)
+        val poi = intent?.getParcelableExtra<PoiInfo>(POI)
+        if (poi != null) {
+            mEndNodeTitle.postValue("${poi.name} ${poi.city}${poi.area}")
+            mEndNode = PlanNode.withLocation(LatLng(poi.location.latitude,poi.location.longitude))
+            mExitPoi = poi
+            mEntrancePoi = PoiInfo()
+            mEntrancePoi?.uid = MY_LOCATION
+            mEntrancePoi?.name = currentLocation?.addrStr
+            mEntrancePoi?.city = currentLocation?.city
+            mEntrancePoi?.location = LatLng(currentLocation!!.latitude,currentLocation!!.longitude)
+            mEntrancePoi?.area = currentLocation?.district
+            val poiDetailInfo = PoiDetailInfo()
+            poiDetailInfo.tag = POINT
+            mEntrancePoi?.poiDetailInfo = poiDetailInfo
+            startSearch(tabRoute.selectedTabPosition)
+        }
+        val line = intent?.getParcelableExtra<CollectedLineEntity>(LINE)
+        if(line!=null){
+            if(line.uid.contains(MY_LOCATION)){
+                if(line.uid.substring(0,4) == MY_LOCATION){
+                    mStartNodeTitle.postValue(MY_LOCATION)
+                    mEndNodeTitle.postValue("${line.exitName} ${line.exitCity}${line.exitArea}")
+                }else{
+                    mStartNodeTitle.postValue("${line.entranceName} ${line.entranceCity}${line.entranceArea}")
+                    mEndNodeTitle.postValue(MY_LOCATION)
+                }
+            }else{
+                mStartNodeTitle.postValue("${line.entranceName} ${line.entranceCity}${line.entranceArea}")
+                mEndNodeTitle.postValue("${line.exitName} ${line.exitCity}${line.exitArea}")
+            }
+            mEntrancePoi = CommonUtil.ConvertLineToEntrancePoi(line)
+            mExitPoi = CommonUtil.ConvertLineToExitPoi(line)
+            mStartNode = PlanNode.withLocation(LatLng(mEntrancePoi?.location!!.latitude,mEntrancePoi?.location!!.longitude))
+            mEndNode = PlanNode.withLocation(LatLng(mExitPoi?.location!!.latitude,mExitPoi?.location!!.longitude))
+            startSearch(tabRoute.selectedTabPosition)
+        }
     }
 
     private fun initToolbar() {
@@ -209,27 +259,28 @@ class RouteActivity : AppCompatActivity() {
             mIsStartPoi = false
             toSearchActivity()
         }
-        tabRoute.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabReselected(tab: TabLayout.Tab?) {
-
-            }
-
-            override fun onTabUnselected(tab: TabLayout.Tab?) {
-
-            }
-
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                if (mStartNode != null && mEndNode != null) {
-                    startSearch(tabRoute.selectedTabPosition)
-                }
-            }
-        })
     }
 
     private fun initFAB() {
         fabRouteMyLocation.setOnClickListener {
             isFirstLocated = true
             mLocationClient.start()
+        }
+        fabLineCollect.setOnClickListener {
+            val currentLine = CollectedLineEntity("${mEntrancePoi?.uid}->${mExitPoi?.uid}",
+                mEntrancePoi?.name,mEntrancePoi?.city,mEntrancePoi?.location?.latitude,mEntrancePoi?.location?.longitude,
+                mEntrancePoi?.area,mEntrancePoi?.getPoiDetailInfo()?.tag,
+                mExitPoi?.name,mExitPoi?.city,mExitPoi?.location?.latitude,mExitPoi?.location?.longitude,
+                mExitPoi?.area,mExitPoi?.getPoiDetailInfo()?.tag)
+            Completable.fromAction{
+                if(mIsLineCollected){
+                    mAppDataBaseHelper.deleteLine(currentLine)
+                }else{
+                    mAppDataBaseHelper.insertLine(currentLine)
+                }
+            }.subscribeOn(Schedulers.computation())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe()
         }
     }
 
@@ -265,6 +316,8 @@ class RouteActivity : AppCompatActivity() {
         mTransitRouteLinesAdapter.setOnItemClickListener { _, _, position ->
             val intent = Intent(this, TransitRouteLineDetailActivity::class.java)
             intent.putExtra(TRANSIT_ROUTE_LINE, mTransitRouteLineList[position])
+            intent.putExtra(ENTRANCE_POI, mEntrancePoi)
+            intent.putExtra(EXIT_POI, mExitPoi)
             startActivity(intent)
         }
     }
@@ -274,6 +327,21 @@ class RouteActivity : AppCompatActivity() {
         tabRoute.addTab(tabRoute.newTab().setIcon(R.drawable.ic_directions_car_grey_800_24dp))
         tabRoute.addTab(tabRoute.newTab().setIcon(R.drawable.ic_directions_walk_grey_800_24dp))
         tabRoute.addTab(tabRoute.newTab().setIcon(R.drawable.ic_directions_bike_grey_800_24dp))
+        tabRoute.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) {
+
+            }
+
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                if (mStartNode != null && mEndNode != null) {
+                    startSearch(tabRoute.selectedTabPosition)
+                }
+            }
+        })
     }
 
     private fun initMap() {
@@ -340,6 +408,15 @@ class RouteActivity : AppCompatActivity() {
                 } else {
                     ToastUtils.showShort(R.string.err_no_routeline_result)
                 }
+                mAppDataBaseHelper.queryLinesByUid("${mEntrancePoi?.uid}->${mExitPoi?.uid}").observe(this@RouteActivity, Observer{
+                    mIsLineCollected = if(it!=null&& it.isNotEmpty()){
+                        fabLineCollect.setImageResource(R.drawable.ic_star_white_24dp)
+                        true
+                    }else{
+                        fabLineCollect.setImageResource(R.drawable.ic_star_border_white_24dp)
+                        false
+                    }
+                })
             }
 
             override fun onGetWalkingRouteResult(walkingRouteResult: WalkingRouteResult?) {
@@ -360,6 +437,15 @@ class RouteActivity : AppCompatActivity() {
                 } else {
                     ToastUtils.showShort(R.string.err_no_routeline_result)
                 }
+                mAppDataBaseHelper.queryLinesByUid("${mEntrancePoi?.uid}->${mExitPoi?.uid}").observe(this@RouteActivity, Observer{
+                    mIsLineCollected = if(it!=null&& it.isNotEmpty()){
+                        fabLineCollect.setImageResource(R.drawable.ic_star_white_24dp)
+                        true
+                    }else{
+                        fabLineCollect.setImageResource(R.drawable.ic_star_border_white_24dp)
+                        false
+                    }
+                })
             }
 
             override fun onGetMassTransitRouteResult(massTransitRouteResult: MassTransitRouteResult?) {
@@ -383,6 +469,15 @@ class RouteActivity : AppCompatActivity() {
                 } else {
                     ToastUtils.showShort(R.string.err_no_routeline_result)
                 }
+                mAppDataBaseHelper.queryLinesByUid("${mEntrancePoi?.uid}->${mExitPoi?.uid}").observe(this@RouteActivity, Observer{
+                    mIsLineCollected = if(it!=null&& it.isNotEmpty()){
+                        fabLineCollect.setImageResource(R.drawable.ic_star_white_24dp)
+                        true
+                    }else{
+                        fabLineCollect.setImageResource(R.drawable.ic_star_border_white_24dp)
+                        false
+                    }
+                })
             }
         }
     }
@@ -407,7 +502,7 @@ class RouteActivity : AppCompatActivity() {
         when (searchMethod) {
             SEARCH_BY_TRANSIT -> {
                 if (mStartNode?.city == null) {
-                    mRoutePlanRepository.startTransitSearch(currentCity, mStartNode, mEndNode)
+                    mRoutePlanRepository.startTransitSearch(currentLocation?.city, mStartNode, mEndNode)
                 } else {
                     mRoutePlanRepository.startTransitSearch(mStartNode?.city, mStartNode, mEndNode)
                 }
@@ -429,6 +524,7 @@ class RouteActivity : AppCompatActivity() {
         mBaiduMap.animateMapStatus(update)
         update = MapStatusUpdateFactory.zoomTo(16f)
         mBaiduMap.animateMapStatus(update)
+
     }
 
     private fun toSearchActivity() {

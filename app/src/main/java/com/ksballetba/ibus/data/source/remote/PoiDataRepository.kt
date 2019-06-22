@@ -1,5 +1,6 @@
 package com.ksballetba.ibus.data.source.remote
 
+import com.baidu.location.BDLocation
 import com.baidu.mapapi.model.LatLng
 import com.baidu.mapapi.search.poi.OnGetPoiSearchResultListener
 import com.baidu.mapapi.search.poi.PoiCitySearchOption
@@ -11,13 +12,12 @@ class PoiDataRepository(onGetPoiSearchResultListener:OnGetPoiSearchResultListene
     companion object {
         private val RADIUS = 20000
         @Volatile
-        var currentCity = ""
-        @Volatile
-        var currentLatLng: LatLng? = null
+        var currentLocation:BDLocation? = null
         const val SUBWAY_STATION = "地铁站"
         const val BUS_STATION = "公交车站"
         const val SUBWAY_LINE = "地铁线路"
         const val BUS_LINE = "公交线路"
+        const val POINT = "地点"
     }
 
     private val mPoiSearch = PoiSearch.newInstance()

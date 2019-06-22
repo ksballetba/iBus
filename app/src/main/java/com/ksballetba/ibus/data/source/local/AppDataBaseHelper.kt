@@ -3,6 +3,7 @@ package com.ksballetba.ibus.data.source.local
 import android.arch.persistence.room.Room
 import android.content.Context
 import android.util.Log
+import com.ksballetba.ibus.data.entity.CollectedLineEntity
 import com.ksballetba.ibus.data.entity.CollectedPoiEntity
 
 class AppDataBaseHelper constructor(context: Context) {
@@ -47,6 +48,22 @@ class AppDataBaseHelper constructor(context: Context) {
 
     fun deletePoi(poi: CollectedPoiEntity) {
         appDataBase.getCollectedPoisDao().deletePoi(poi)
+    }
+
+    fun insertLine(line: CollectedLineEntity) {
+        appDataBase.getCollectedLinesDao().insertLine(line)
+    }
+
+    fun insertLines(lines: List<CollectedLineEntity>) {
+        appDataBase.getCollectedLinesDao().insertLines(lines)
+    }
+
+    fun queryAllLines() = appDataBase.getCollectedLinesDao().queryAllLines()
+
+    fun queryLinesByUid(uid: String?) = appDataBase.getCollectedLinesDao().queryLinesByUid(uid)
+
+    fun deleteLine(line: CollectedLineEntity) {
+        appDataBase.getCollectedLinesDao().deleteLine(line)
     }
 
 }
